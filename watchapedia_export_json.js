@@ -22,7 +22,8 @@
 			duration: details.duration,
 			stillcut: details.stillcut,
 			nations: details.nations,
-			genres: details.genres
+			genres: details.genres, 
+			directors: details.director_names,
 		};
 	};
 
@@ -53,7 +54,14 @@
 		const ratings = await fetchAllContent(`/api/users/${userId}/contents/${type}/ratings`, updateProgress);
 		const comments = await fetchAllContent(`/api/users/${userId}/contents/${type}/comments`, updateProgress);
 
-		return { ratings, comments };
+		const mergeRatingsAndComments = (ratings, comments) => {
+			return ratings.map((rating) => {
+				const comment = comments.find((comment) => comment.content.code === rating.content.code);
+				return { ...rating, user_content_action: { ...rating.user_content_action, text: comment?.text } };
+			});
+		};
+
+		return mergeRatingsAndComments(ratings, comments);
 	};
 
 	await (async () => {
@@ -96,13 +104,15 @@
 			const tvContents = await fetchUserContents("tv_seasons", updateProgress);
 
 			const allContents = {
-				movies: await Promise.all(movieContents.ratings.map(async (content) => {
+				movies: await Promise.all(movieContents.map(async (content) => {
 					const details = await fetchContentDetails(content.content.code);
-					return { ...content, content: { ...content.content, ...details } };
+					const mergedContent = { ...content, content: { ...content.content, ...details } };
+					return mergedContent;
 				})),
-				tv_seasons: await Promise.all(tvContents.ratings.map(async (content) => {
+				tv_seasons: await Promise.all(tvContents.map(async (content) => {
 					const details = await fetchContentDetails(content.content.code);
-					return { ...content, content: { ...content.content, ...details } };
+					const mergedContent = { ...content, content: { ...content.content, ...details } };
+					return mergedContent;
 				}))
 			};
 
